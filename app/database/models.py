@@ -1,6 +1,7 @@
 import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey
+
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Column, JSON
 from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 
@@ -25,13 +26,14 @@ class Note(Base):                           # Table for notes
     id: Mapped[int] = mapped_column(primary_key=True)
     text: Mapped[str] = mapped_column()
     tg_id: Mapped[int] = mapped_column(BigInteger)
+    reminder_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 async def async_main():                  # Function for creating tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-async def store_note(tg_id, note_text): # Function for storing notes
+async def store_note(tg_id, note_text, reminder_time): # Function for storing notes
     async with async_session() as session:
-        note = Note(text=note_text, tg_id=tg_id)
+        note = Note(text=note_text, tg_id=tg_id, reminder_time=reminder_time)
         session.add(note)
         await session.commit()
