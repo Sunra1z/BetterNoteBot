@@ -7,7 +7,7 @@ main_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text='Заметки на сегодня')]
 ],
 resize_keyboard=True,
-one_time_keyboard=True,
+one_time_keyboard=False,
 input_field_placeholder='Выберите действие'
 )
 
