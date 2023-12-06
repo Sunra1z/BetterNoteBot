@@ -3,15 +3,15 @@ import datetime
 import asyncio
 
 
-from app.keyboards import main_kb
+from keyboards import main_kb
 from aiogram import Router, F
-from app.database.requests import get_notes
+from database.requests import get_notes
 
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message
-from app.database.models import store_note
+from database.models import store_note
 
 router = Router() # Router for message handlers, used to create main functions in different files, and not in one big file
 

@@ -1,4 +1,4 @@
-from app.database.models import User, Note, async_session
+from database.models import User, Note, async_session
 from sqlalchemy import select
 
 
