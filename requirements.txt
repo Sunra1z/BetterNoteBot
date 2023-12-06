@@ -2,3 +2,4 @@ aiogram
 sqlalchemy
 asyncio
 aiosqlite
+pytz
