@@ -56,8 +56,11 @@ async def gpt_think(message: Message, state: FSMContext):
     reminder_time = reminder_time.astimezone(pytz.UTC)
     reminder_time = reminder_time.replace(tzinfo=tz('UTC'))
     print(reminder_time)
-    utcNow = datetime.utcnow()
+    utcNow = datetime.now()
+    utcNow = utcNow.astimezone(pytz.UTC)
+    print(utcNow)
     utcNow = utcNow.replace(tzinfo=tz('UTC'))
+    print(utcNow)
     delay = (reminder_time - utcNow).total_seconds()
     if delay < 0: # Error handler for a past date input
         await message.answer("Время напоминания уже прошло! Введите другое!")
@@ -84,7 +87,7 @@ async def todayNotesShow(message: Message):
     notes = await get_notes(message.from_user.id)
     if notes:
         for note in notes:
-            if note.reminder_time.date() == datetime.now().date(): # Sorting notes only by date, regardless of time
+            if note.reminder_time.date() == datetime.utcnow().date(): # Sorting notes only by date, regardless of time
                 await message.answer(note.text + ' ' + note.reminder_time.strftime('%H:%M')) # Showing only time and text of a note
     else:
         await message.answer("На сегодня нет заметок!")
