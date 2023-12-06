@@ -54,7 +54,6 @@ async def gpt_think(message: Message, state: FSMContext):
         await message.answer("Неверный формат даты! Введите дату в формате ДД-ММ-ГГГГ ЧЧ:ММ")
         return
     reminder_time = reminder_time.astimezone(pytz.UTC)
-    reminder_time = reminder_time.replace(tzinfo=tz('UTC'))
     print(reminder_time)
     utcNow = datetime.now()
     utcNow = utcNow.astimezone(pytz.UTC)
