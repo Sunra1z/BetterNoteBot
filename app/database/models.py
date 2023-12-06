@@ -1,8 +1,8 @@
 import datetime
 
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Column, JSON
-from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase
+from sqlalchemy import BigInteger, DateTime
+from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 
 from config import SQLALCHEMY_URL

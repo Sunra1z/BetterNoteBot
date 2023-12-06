@@ -10,7 +10,7 @@ from config import OpenAiKey
 from aiogram import Router, F
 from app.database.requests import get_notes
 
-from aiogram.filters import CommandStart, Command, StateFilter
+from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message
@@ -54,13 +54,18 @@ async def gpt_think(message: Message, state: FSMContext):
     except ValueError:
         await message.answer("Неверный формат даты! Введите дату в формате ДД/ММ/ГГГГ ЧЧ:ММ")
         return
-    await message.answer("Будет сделано! Напомню вам в" + ' ' + reminder_time_str)
-    user_id = message.from_user.id
-    await store_note(user_id, note_text['note_text'], reminder_time)
-    await state.clear()
-    rmndr = asyncio.create_task(delay_counter(reminder_time))
-    await rmndr
-    await message.answer("Напоминаю!" + ' ' + note_text['note_text'])
+    delay = (reminder_time - datetime.datetime.now()).total_seconds()
+    if delay < 0:
+        await message.answer("Время напоминания уже прошло! Введите другое!")
+        await state.set_state(WaitingForNoteText.gpt_thinker)
+    else:
+        await message.answer("Будет сделано! Напомню вам в" + ' ' + reminder_time_str)
+        user_id = message.from_user.id
+        await store_note(user_id, note_text['note_text'], reminder_time)
+        await state.clear()
+        rmndr = asyncio.create_task(delay_counter(delay))
+        await rmndr
+        await message.answer("Напоминаю!" + ' ' + note_text['note_text'])
 @router.message(F.text.lower() == 'посмотреть заметки') # Handler for getting all notes sorted by user ID
 async def notesShow(message: Message):
     notes = await get_notes(message.from_user.id)
@@ -81,8 +86,6 @@ async def todayNotesShow(message: Message):
         await message.answer("На сегодня нет заметок!")
 
 
-async def delay_counter(reminder_time):
-    delay = (reminder_time - datetime.datetime.now()).total_seconds()
+async def delay_counter(delay):
     if delay > 0:
         await asyncio.sleep(delay)
-
