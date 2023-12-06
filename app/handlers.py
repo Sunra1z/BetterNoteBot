@@ -60,7 +60,7 @@ async def gpt_think(message: Message, state: FSMContext):
     await state.clear()
     rmndr = asyncio.create_task(delay_counter(reminder_time))
     await rmndr
-    await message.answer("Напоминаю!" + note_text['note_text'])
+    await message.answer("Напоминаю!" + ' ' + note_text['note_text'])
 @router.message(F.text.lower() == 'посмотреть заметки') # Handler for getting all notes sorted by user ID
 async def notesShow(message: Message):
     notes = await get_notes(message.from_user.id)
@@ -69,6 +69,16 @@ async def notesShow(message: Message):
             await message.answer(note.text)
     else:
         await message.answer("У вас нет заметок!")
+
+@router.message(F.text.lower() == 'заметки на сегодня')
+async def todayNotesShow(message: Message):
+    notes = await get_notes(message.from_user.id)
+    if notes:
+        for note in notes:
+            if note.reminder_time.date() == datetime.datetime.now().date():
+                await message.answer(note.text + ' ' + note.reminder_time.strftime('%H:%M'))
+    else:
+        await message.answer("На сегодня нет заметок!")
 
 
 async def delay_counter(reminder_time):
