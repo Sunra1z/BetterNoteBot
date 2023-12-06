@@ -1,17 +1,13 @@
-import aiogram.types
+
 import datetime
 import asyncio
-import pprint
-import json
 
-from aiogram.client import bot
 
-import app.handlers
 import openai
 
 from app.keyboards import main_kb
 from config import OpenAiKey
-from aiogram import Router, F, Bot
+from aiogram import Router, F
 from app.database.requests import get_notes
 
 from aiogram.filters import CommandStart, Command, StateFilter
@@ -61,15 +57,10 @@ async def gpt_think(message: Message, state: FSMContext):
     await message.answer("Будет сделано! Напомню вам в" + ' ' + reminder_time_str)
     user_id = message.from_user.id
     await store_note(user_id, note_text['note_text'], reminder_time)
-    delay = (reminder_time - datetime.datetime.now()).total_seconds()
-    print(note_text['note_text'])
-    if delay > 0:
-        await asyncio.sleep(delay)
-        await message.answer("Напоминаю!" + ' ' + note_text['note_text'])
-    else:
-        await message.answer("Время напоминания уже прошло! Введите другое время напоминания!")
-        await state.set_state(WaitingForNoteText.gpt_thinker)
-
+    await state.clear()
+    rmndr = asyncio.create_task(delay_counter(reminder_time))
+    await rmndr
+    await message.answer("Напоминаю!" + note_text['note_text'])
 @router.message(F.text.lower() == 'посмотреть заметки') # Handler for getting all notes sorted by user ID
 async def notesShow(message: Message):
     notes = await get_notes(message.from_user.id)
@@ -79,10 +70,9 @@ async def notesShow(message: Message):
     else:
         await message.answer("У вас нет заметок!")
 
-# @router.message(F.text.lower() == 'отмена') # TODO: Cancel any operation with bot and return to the start
-# async def cancel(message: Message, state: FSMContext):
-#     await message.answer('Отменено!')
-#     await state.clear() # Clearing state
 
-
+async def delay_counter(reminder_time):
+    delay = (reminder_time - datetime.datetime.now()).total_seconds()
+    if delay > 0:
+        await asyncio.sleep(delay)
 
