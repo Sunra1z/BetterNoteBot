@@ -10,7 +10,7 @@ from database.requests import get_notes
 from datetime import datetime
 from pytz import timezone as tz
 
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, StateFilter, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message
@@ -25,26 +25,24 @@ class WaitingForNoteText(StatesGroup): # States for creating notes
     gpt_thinker = State() # nvm I can't name things properly
     note_storage = State()
 
-
 @router.message(CommandStart()) # Handler for /start command
 async def cmd_start(message: Message):
     await message.answer('Добро пожаловать!')
     await message.answer('Я бот который поможет тебе делать заметки!', reply_markup=main_kb)
 
-@router.message(F.text.lower() == 'создать заметку') # Handler for creating notes STEP 1 FOR STATES
+@router.message(F.text.lower() == 'создать заметку', StateFilter(None)) # Handler for creating notes STEP 1 FOR STATES
 async def start_note(message: Message, state: FSMContext):
     await message.answer('Введите текст заметки')
     await state.set_state(WaitingForNoteText.typing_note) # Setting state as WAITING
 
-@router.message(WaitingForNoteText.typing_note) # Handler for creating notes STEP 2 FOR STATES
+@router.message(WaitingForNoteText.typing_note, ~(F.text.lower() == 'отмена')) # Handler for creating notes STEP 2 FOR STATES
 async def end_note(message: Message, state: FSMContext):
-    note_text = message.text
+    await state.update_data(note_text=message.text)
     await message.answer('Заметка сохранена!')
-    await message.answer('Введи время напоминания в формате ДД-ММ-ГГГГ ЧЧ:ММ')
+    await message.answer('Введите время напоминания в формате ДД-ММ-ГГГГ ЧЧ:ММ')
     await state.set_state(WaitingForNoteText.gpt_thinker) # Setting state as WAITING for reminder
-    await state.update_data(note_text=note_text) # Updating data for reminder
 
-@router.message(WaitingForNoteText.gpt_thinker) # Handler for remind time STEP 3 FOR STATES
+@router.message(WaitingForNoteText.gpt_thinker, ~(F.text.lower() == 'отмена')) # Handler for remind time STEP 3 FOR STATES
 async def gpt_think(message: Message, state: FSMContext):
     reminder_time_str = message.text
     note_text = await state.get_data()
@@ -97,7 +95,9 @@ async def delay_counter(delay): # That is a reminder system, it works by delayin
     if delay > 0:
         await asyncio.sleep(delay)
 
-@router.message(F.text.lower() == 'отмена') # Handler for cancel command
-async def cancel(message: Message, state: FSMContext):
+@router.message(Command(commands=["cancel"]))
+@router.message(F.text.lower() == 'отмена') # Handler for cancelling a note creation
+async def cmd_cancel(message: Message, state: FSMContext):
     await message.answer('Действие отменено!')
-    await state.clear_state()
+    await state.clear()
+    await message.answer('Выберите действие', reply_markup=main_kb)
