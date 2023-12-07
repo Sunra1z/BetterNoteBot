@@ -1,7 +1,5 @@
 
-
 import asyncio
-
 import pytz
 
 from keyboards import main_kb
@@ -51,15 +49,8 @@ async def gpt_think(message: Message, state: FSMContext):
     except ValueError: # Error handler for invalid date format
         await message.answer("Неверный формат даты! Введите дату в формате ДД-ММ-ГГГГ ЧЧ:ММ")
         return
-    reminder_time = reminder_time.astimezone(pytz.UTC)
-    reminder_time = reminder_time.replace(tzinfo=tz('UTC'))
     print(reminder_time)
-    utcNow = datetime.now()
-    utcNow = utcNow.astimezone(pytz.UTC)
-    print(utcNow)
-    utcNow = utcNow.replace(tzinfo=tz('UTC'))
-    print(utcNow)
-    delay = (reminder_time - utcNow).total_seconds()
+    delay = (reminder_time - datetime.now()).total_seconds()
     if delay < 0: # Error handler for a past date input
         await message.answer("Время напоминания уже прошло! Введите другое!")
         await state.set_state(WaitingForNoteText.gpt_thinker)
@@ -84,12 +75,16 @@ async def notesShow(message: Message): # Func to retrieve and show all notes fro
 async def todayNotesShow(message: Message):
     notes = await get_notes(message.from_user.id)
     if notes:
+        notes_text = ""
         for note in notes:
             if note.reminder_time.date() == datetime.utcnow().date(): # Sorting notes only by date, regardless of time
-                await message.answer(note.text + ' ' + note.reminder_time.strftime('%H:%M')) # Showing only time and text of a note
+                notes_text += note.text + ' ' + note.reminder_time.strftime("%H:%M") + '\n'
+        if notes_text:
+            await message.answer(notes_text)
+        else:
+            await message.answer("На сегодня нет заметок!")
     else:
-        await message.answer("На сегодня нет заметок!")
-
+        await message.answer("У вас нет заметок!")
 
 async def delay_counter(delay): # That is a reminder system, it works by delaying a message for a certain amount of time (Works asynchronously tho!)
     if delay > 0:
@@ -101,3 +96,8 @@ async def cmd_cancel(message: Message, state: FSMContext):
     await message.answer('Действие отменено!')
     await state.clear()
     await message.answer('Выберите действие', reply_markup=main_kb)
+
+@router.message(F.content_type.in_({'photo', 'video', 'document', 'audio', 'voice', 'sticker', 'video_note', 'location', 'contact'})) # Handler for sending something other than text
+async def wrong_input(message: Message):
+    await message.answer_sticker(r'CAACAgIAAxkBAAEK6wZlcf_NDJDKNfz0YbNBSJOMxqRtfQACaxUAAm9nyUvmI8GFzuJ1dTME')
+    await message.answer('Извините, я не понимаю вас!')
