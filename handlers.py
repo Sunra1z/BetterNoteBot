@@ -21,12 +21,12 @@ class CmdStates(StatesGroup):  # States for creating notes
     user_note_save = State()
     reminder_system = State()  # nvm I can't name things properly
     removing_note = State()
+    search_notes = State()
 
 @router.message(CommandStart()) # Handler for /start command
 async def cmd_start(message: Message):
     await message.answer('Добро пожаловать!')
     await message.answer('Я бот который поможет тебе делать заметки!', reply_markup=main_kb)
-
 @router.message(F.text == '📝 Создать заметку', StateFilter(None)) # Handler for creating notes STEP 1 FOR STATES
 async def start_note(message: Message, state: FSMContext):
     await message.answer('Введите текст заметки')
@@ -99,6 +99,33 @@ async def cmd_cancel(message: Message, state: FSMContext):
     await message.answer('Действие отменено!')
     await state.clear()
     await message.answer('Выберите действие', reply_markup=main_kb)
+
+@router.message(F.text == '🔍 Поиск заметок') # Handler for searching notes by text
+async def search_notes(message: Message, state: FSMContext):
+    await message.answer('Введите ключевые слова для поиска')
+    await state.set_state(CmdStates.search_notes)
+
+@router.message(CmdStates.search_notes, ~(F.text == '🚫 Отмена')) # Handler for searching notes by text
+async def search_notes(message: Message, state: FSMContext):
+    search_text = message.text
+    notes = await get_notes(message.from_user.id)
+    if notes:
+        notes_text = ""
+        for i, note in enumerate(notes):
+            if search_text.lower() in note.text.lower():
+                notes_text += f"{i+1}. {note.text} {note.reminder_time.strftime('%d-%m-%Y %H:%M')}\n"
+        if notes_text:
+            await message.answer(notes_text)
+            await state.clear()
+        else:
+            await message.answer("Заметки не найдены!")
+            await state.clear()
+    else:
+        await message.answer("У вас нет заметок!")
+        await state.clear()
+
+
+
 
 @router.message(F.content_type.in_({'photo', 'video', 'document', 'audio', 'voice', 'sticker', 'video_note', 'location', 'contact'})) # Handler for sending something other than text
 async def wrong_input(message: Message):

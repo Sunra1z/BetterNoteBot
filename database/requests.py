@@ -8,3 +8,4 @@ async def get_notes(tg_id):
         result = await session.execute(stmt)
         return result.scalars().all()
 
+
