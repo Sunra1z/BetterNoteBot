@@ -4,7 +4,7 @@ import asyncio
 
 from keyboards import main_kb
 from aiogram import Router, F
-from database.requests import get_notes
+from database.requests import get_notes, delete_notes
 from datetime import datetime
 
 
@@ -124,7 +124,31 @@ async def search_notes(message: Message, state: FSMContext):
         await message.answer("У вас нет заметок!")
         await state.clear()
 
+@router.message(F.text == '🗑️ Удалить заметку') # Handler for deleting notes
+async def remove_notes(message: Message, state: FSMContext):
+    notes = await get_notes(message.from_user.id)  # Getting all notes from DB by user ID
+    if notes:
+        notes_text = "" # Creating a string for notes
+        for i, note in enumerate(notes):  # Using enum to access/show notes by index
+            notes_text += f"{i+1}. {note.text} {note.reminder_time.strftime('%d-%m-%Y %H:%M')}\n"
+        if notes_text:
+            await message.answer(notes_text)  # If notes exist, show them
+        else:
+            await message.answer("У вас нет заметок для удаления!")  # If notes don't exist, show this
+    await message.answer('Введите номер заметки для удаления')
+    await state.set_state(CmdStates.removing_note)  # Moving to next state
 
+@router.message(CmdStates.removing_note, ~(F.text == '🚫 Отмена')) # Handler for deleting notes
+async def removing_notes(message: Message, state: FSMContext):
+    note_index = int(message.text) - 1  # Getting note index from user input
+    notes = await get_notes(message.from_user.id)
+    if 0 <= note_index < len(notes):  # Checking if note index is valid
+        note_to_remove = notes[note_index]  # Creating an ID based on note index
+        await delete_notes(message.from_user.id, note_to_remove.id)  # Passing user and note ID to delete request
+        await message.answer('Заметка удалена!')
+        await state.clear()
+    else:
+        await message.answer('Неверный номер заметки!')
 
 
 @router.message(F.content_type.in_({'photo', 'video', 'document', 'audio', 'voice', 'sticker', 'video_note', 'location', 'contact'})) # Handler for sending something other than text
