@@ -15,7 +15,7 @@ from aiogram.types import Message
 from database.models import store_note
 
 router = Router()  # Router for message handlers, used to create main functions in different files, and not in one big file
-
+reminder_tasks = {}  # Dict for storing reminder tasks
 
 class CmdStates(StatesGroup):  # States for creating notes
     user_note_save = State()
@@ -56,9 +56,10 @@ async def gpt_think(message: Message, state: FSMContext):
     else:
         await message.answer("Будет сделано! Напомню вам в" + ' ' + reminder_time_str)
         user_id = message.from_user.id
-        await store_note(user_id, note_text['note_text'], reminder_time) # Saving correct note data to a DB
+        note = await store_note(user_id, note_text['note_text'], reminder_time) # Saving correct note data to a DB
         await state.clear() # Clearing state to let user use other commands
         rmndr = asyncio.create_task(delay_counter(delay)) # Creating asynchronous task for reminder system (Helps with multitasking!)
+        reminder_tasks[note.id] = rmndr # Storing reminder id in task list
         await rmndr
         await message.answer("Напоминаю!" + ' ' + note_text['note_text'])
 @router.message(F.text == '✉️ История заметок') # Handler for getting all notes sorted by user ID
@@ -145,8 +146,11 @@ async def removing_notes(message: Message, state: FSMContext):
     if 0 <= note_index < len(notes):  # Checking if note index is valid
         note_to_remove = notes[note_index]  # Creating an ID based on note index
         await delete_notes(message.from_user.id, note_to_remove.id)  # Passing user and note ID to delete request
-        await message.answer('Заметка удалена!')
-        await state.clear()
+        if note_to_remove.id in reminder_tasks: # Checking if note has a reminder task
+            reminder_tasks[note_to_remove.id].cancel() # Cancelling reminder task
+            del reminder_tasks[note_to_remove.id] # Deleting reminder task from list
+            await message.answer('Заметка удалена!')
+            await state.clear()
     else:
         await message.answer('Неверный номер заметки!')
 
